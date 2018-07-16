@@ -8,6 +8,7 @@
 
 import Foundation
 import Alamofire
+import SwiftyJSON
 import Alamofire_SwiftyJSON
 
 class ApiService {
@@ -18,11 +19,15 @@ class ApiService {
     }
 
     func query() {
-        let section = "all-section"
+        let section = "all-sections"
         let period = "7"
         Alamofire.request("https://api.nytimes.com/svc/mostpopular/v2/mostviewed/\(section)/\(period).json?api-key=\(self.key)").responseSwiftyJSON { dataResponse in
             self.mockQuery()
             if let status = dataResponse.value?["status"], status == "OK" {
+                let results: [Article] = dataResponse.value!["results"].arrayValue.map({ (result) -> Article in
+                    return self.createArticle(result)
+                });
+                AppModel.shared.replacePopularArticles(results)
                 return
             }
             if let message = dataResponse.value?["message"] {
@@ -30,6 +35,29 @@ class ApiService {
                 return
             }
         }
+    }
+
+    private func getSquareImage(_ json: JSON) -> String? {
+        for var media in json["media"].arrayValue {
+            guard media["type"].stringValue == "image" else { continue }
+            for var image in media["media-metadata"].arrayValue {
+                guard image["format"].stringValue == "square640" else { continue }
+                return image["url"].stringValue
+            }
+        }
+        return nil
+    }
+
+    private func createArticle(_ json: JSON) -> Article {
+        let id = json["id"].intValue
+        let a = Article("\(id)", json["title"].stringValue)
+        a.agency = json["source"].stringValue
+        a.author = json["byline"].stringValue
+        a.summary = json["abstract"].stringValue
+        a.timestampString = json["published_date"].stringValue
+        a.url = json["url"].stringValue
+        a.imageUrl = self.getSquareImage(json) ?? ""
+        return a
     }
 
     func mockQuery() {

@@ -7,6 +7,8 @@
 //
 
 import UIKit
+import Alamofire
+import AlamofireImage
 
 class ArticleCell: UITableViewCell {
 
@@ -27,18 +29,28 @@ class ArticleCell: UITableViewCell {
         self.agency.text = article.agency ?? ""
         self.timestamp.text = article.timestampString ?? ""
         self.articleId = article.id
+        if let img = article.imageUrl, img != "" {
+            Alamofire.request(img).responseImage { response in
+                guard let image = response.result.value else { return }
+                DispatchQueue.main.async(execute: {
+                    guard self.articleId == article.id else { return }
+                    self.media.image = image.af_imageRoundedIntoCircle()
+                })
+            }
+        }
         // self.media.image = UIImage(contentsOf)
     }
 
     override func prepareForReuse() {
         self.articleId = nil
+        self.media.image = #imageLiteral(resourceName: "nyt-favicon")
     }
 }
 
 class BrowseArticlesViewController: UIViewController {
     @IBOutlet var articles: UITableView!
     private let model = AppModel.shared
-    private let service = ApiService("")
+    private let service = ApiService()
 
     override func viewDidLoad() {
         super.viewDidLoad()
