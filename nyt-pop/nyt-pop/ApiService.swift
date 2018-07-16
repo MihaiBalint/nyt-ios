@@ -7,6 +7,8 @@
 //
 
 import Foundation
+import Alamofire
+import Alamofire_SwiftyJSON
 
 class ApiService {
     let key: String
@@ -16,6 +18,21 @@ class ApiService {
     }
 
     func query() {
+        let section = "all-section"
+        let period = "7"
+        Alamofire.request("https://api.nytimes.com/svc/mostpopular/v2/mostviewed/\(section)/\(period).json?api-key=\(self.key)").responseSwiftyJSON { dataResponse in
+            self.mockQuery()
+            if let status = dataResponse.value?["status"], status == "OK" {
+                return
+            }
+            if let message = dataResponse.value?["message"] {
+                print("Error: \(message)")
+                return
+            }
+        }
+    }
+
+    func mockQuery() {
         let m = AppModel.shared
         let a1 = Article("100000005955815", "Opposition to Breast-Feeding Resolution by U.S. Stuns World Health Officials")
         a1.agency = "The New York Times"
